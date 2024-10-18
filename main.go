@@ -3,62 +3,68 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-
 	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+	"net/http"
 )
 
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+var (
+	PORT = 8080
+)
+
 func main() {
 	rooms := make([]Room, 0)
-	http.HandleFunc("/room", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method == http.MethodPost {
-			player := Player{}
-			err := json.NewDecoder(r.Body).Decode(&player)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				resp := ErrorResponse{
-					Error: "Failed to read user data",
-				}
-				err = json.NewEncoder(w).Encode(resp)
-				if err != nil {
-					http.Error(w, "Failed to generate json message", http.StatusInternalServerError)
-
-				}
-				return
-			}
-			room, err := NewRoom(player)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				resp := ErrorResponse{
-					Error: "Failed to create room",
-				}
-				err = json.NewEncoder(w).Encode(resp)
-				if err != nil {
-					http.Error(w, "Failed to generate json message", http.StatusInternalServerError)
-				}
-				return
-			}
-			rooms = append(rooms, room)
-			fmt.Fprintf(w, "{\"gameId\": \"%s\",\n\"gameCode\": \"%s\"}", room.Id, room.GetGameCode())
-			return
-
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
+	players := make([]Player, 0)
+	e := echo.New()
+	e.POST("/get-credentials", func(c echo.Context) error {
+		var player Player
+		if err := c.Bind(&player); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Input inválido")
 		}
+		player = NewPlayer(player.Id, player.Username)
+		players = append(players, player)
+		return c.JSON(http.StatusOK, player)
+
 	})
-	fmt.Println("Server listening on port :8080")
-	http.ListenAndServe(":8080", nil)
+	e.POST("/room", func(c echo.Context) error {
+		c.Response().Header().Set("Content-Type", "application/json")
+		player := Player{}
+		if err := c.Bind(&player); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Failed to read user data")
+
+		}
+		room, err := NewRoom(player)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create room")
+		}
+		rooms = append(rooms, room)
+
+		return c.JSON(http.StatusCreated, map[string]string{"roomId": room.Id, "roomCode": room.GetInviteCode()})
+
+	})
+	fmt.Printf("Server listening on port :%d\n", PORT)
+	e.Start(fmt.Sprintf(":%d", PORT))
 }
 
 type Player struct {
-	Id string `json:"id"`
+	Id       string `json:"id"`
+	Username string `json:"username"`
 }
+
+func NewPlayer(id string, username string) Player {
+	if id == "" {
+		id = uuid.NewString()
+	}
+	return Player{
+		id,
+		username,
+	}
+}
+
 type Room struct {
 	Id      string
 	Players []Player
@@ -74,6 +80,6 @@ func NewRoom(player Player) (Room, error) {
 	}, nil
 
 }
-func (r Room) GetGameCode() string {
+func (r Room) GetInviteCode() string {
 	return r.Id[14:23]
 }
