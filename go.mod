@@ -1,4 +1,4 @@
-module game
+module github.com/J3anSimas/game_multiplayer_go
 
 go 1.23.2
 
