@@ -43,6 +43,7 @@ func NewRoom(width, height int) (Room, error) {
 		Strength:       utils.PlayerStartingStrength,
 		TotalShots:     utils.PlayerStartingTotalShots,
 		ShotsRemaining: utils.PlayerStartingShotsRemaining,
+		IsDead:         false,
 	}
 	room.Players = players
 
@@ -70,6 +71,7 @@ func (r *Room) JoinGame() (Player, error) {
 		Strength:       utils.PlayerStartingStrength,
 		TotalShots:     utils.PlayerStartingTotalShots,
 		ShotsRemaining: utils.PlayerStartingShotsRemaining,
+		IsDead:         false,
 	}
 	r.Players = append(r.Players, &player)
 	return player, nil

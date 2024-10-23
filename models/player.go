@@ -15,11 +15,14 @@ type Player struct {
 	IsHost         bool
 	Position       types.Point
 	Health         int
+	Coins          int
 	MoveCapacity   int
 	MovesRemaining int
 	Strength       int
 	TotalShots     int
 	ShotsRemaining int
+
+	IsDead bool
 }
 
 func (p *Player) Move(posX, posY int, room *Room) ([]types.Point, error) {
