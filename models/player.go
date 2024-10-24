@@ -147,3 +147,7 @@ func (p Player) FindShortestPath(room Room, endPoint types.Point) (int, []types.
 
 	return -1, nil // Se não houver caminho
 }
+func (p *Player) ResetAttributes() {
+	p.ShotsRemaining = p.TotalShots
+	p.MovesRemaining = p.MoveCapacity
+}

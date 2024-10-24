@@ -15,6 +15,8 @@ type Room struct {
 	WorldHeight int
 	Players     []*Player
 	Mobs        []*Mob
+	ShopItems   []ShopItem
+	Turn        types.Turn
 }
 
 func NewRoom(width, height int) (Room, error) {
@@ -25,11 +27,34 @@ func NewRoom(width, height int) (Room, error) {
 		height = utils.WorldDefaultHeight
 	}
 	id := uuid.NewString()
+	shopItems := make([]ShopItem, 3)
+	shopItems[0] = ShopItem{
+		Title:       "Botas de Movimento",
+		Description: "Aumenta o número de movimentos por turno em 2",
+		Cost:        10,
+		Attribute:   types.MovementAttribute,
+		Modifier:    2,
+	}
+	shopItems[1] = ShopItem{
+		Title:       "Lâmina do Infinito",
+		Description: "Aumenta a força em 5",
+		Cost:        10,
+		Attribute:   types.StrengthAttribute,
+		Modifier:    5,
+	}
+	shopItems[2] = ShopItem{
+		Title:       "Dançarina Fantasma",
+		Description: "Aumenta o número de ataques por turno em 1",
+		Cost:        17,
+		Attribute:   types.AttackVelocityAttribute,
+		Modifier:    1,
+	}
 	room := Room{
 		Id:          id,
 		WorldWidth:  width,
 		WorldHeight: height,
 		Status:      types.WaitingForConnection,
+		Turn:        types.HostTurn,
 	}
 	players := make([]*Player, 1)
 	players[0] = &Player{
