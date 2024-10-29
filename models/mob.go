@@ -8,3 +8,12 @@ type Mob struct {
 	Strength    int
 	CoinsToDrop int
 }
+
+func NewMob(health int, position types.Point, strength int, coins int) *Mob {
+	return &Mob{
+		Health:      health,
+		Position:    position,
+		Strength:    strength,
+		CoinsToDrop: coins,
+	}
+}
