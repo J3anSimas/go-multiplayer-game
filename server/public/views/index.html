@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link
+      href="https://cdn.jsdelivr.net/npm/daisyui@2.6.0/dist/full.css"
+      rel="stylesheet"
+      type="text/css"
+    />
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script>
+		tailwind.config = {
+			theme: {
+				extend: {
+					colors: {
+						clifford: '#da373d',
+					}
+				}
+			}
+		}
+	</script>
+	<title>BruiserWar</title>
+</head>
+<script>
+	let invite_code = ''
+	let room_id = ''
+	let player_id = ''
+
+	async function StartGame() {
+		//alert("start game")
+		const response = await fetch("/room", {method: "POST"})
+		const parsedResponse = await response.json()
+		invite_code = parsedResponse.invite_code
+		room_id = parsedResponse.room_id
+		player_id = parsedResponse.player_id
+	}
+</script>
+<body>
+	<div class="w-screen h-screen flex justify-center items-center ">
+		<div class="flex justify-around items-center gap-4 p-8">
+			 <button class="btn-primary px-24 py-16 rounded-md font-bold text-3xl flex justify-center items-center" onclick="StartGame()">NOVO JOGO</button>
+			 <button class="btn-secondary px-24 py-16 rounded-md font-bold text-3xl flex justify-center items-center">JUNTAR-SE</button>
+		</div>
+	</div>
+</body>
+
+</html>
