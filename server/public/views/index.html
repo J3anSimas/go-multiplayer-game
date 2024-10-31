@@ -4,6 +4,14 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+		* {
+			padding: 0;
+			margin: 0;
+			box-sizing: border-box;
+
+		}
+		</style>	
 	<link
       href="https://cdn.jsdelivr.net/npm/daisyui@2.6.0/dist/full.css"
       rel="stylesheet"
@@ -23,27 +31,138 @@
 	</script>
 	<title>BruiserWar</title>
 </head>
-<script>
-	let invite_code = ''
-	let room_id = ''
-	let player_id = ''
-
-	async function StartGame() {
-		//alert("start game")
-		const response = await fetch("/room", {method: "POST"})
-		const parsedResponse = await response.json()
-		invite_code = parsedResponse.invite_code
-		room_id = parsedResponse.room_id
-		player_id = parsedResponse.player_id
-	}
-</script>
 <body>
 	<div class="w-screen h-screen flex justify-center items-center ">
-		<div class="flex justify-around items-center gap-4 p-8">
+			<canvas id="gameCanvas" width="800" height="600" class="hidden"></canvas>
+		<div id = "initial_buttons" class="flex justify-around items-center gap-4 p-8">
 			 <button class="btn-primary px-24 py-16 rounded-md font-bold text-3xl flex justify-center items-center" onclick="StartGame()">NOVO JOGO</button>
 			 <button class="btn-secondary px-24 py-16 rounded-md font-bold text-3xl flex justify-center items-center">JUNTAR-SE</button>
 		</div>
 	</div>
 </body>
+<script>
+	const fps = 30;
+	// Calcula o intervalo entre frames em milissegundos
+	const frameInterval = 1000 / fps;
+	let lastFrameTime = 0;
 
+	const canvas = document.querySelector("#gameCanvas")
+	const ctx = canvas.getContext("2d")
+
+	let invite_code = ''
+	let game_state = {}
+	let socket
+	async function StartGame() {
+		//alert("start game")
+		const response = await fetch("/room", {method: "POST"})
+		const parsedResponse = await response.json()
+		console.log(parsedResponse)
+		invite_code = parsedResponse.invite_code
+		game_state = parsedResponse.game
+		const socket_url = "ws://" + window.location.host + "/ws/" + game_state.id
+		socket = new WebSocket(socket_url)
+		socket.onopen = function (event) {
+			console.log("Websocket connected")
+		}
+		socket.onmessage = function (event) {
+			console.log("Websocket connected")
+		}
+		BuildCanvas()
+		setup()
+		requestAnimationFrame(loop)
+	}
+	function loop(timestamp) {
+		const timeSinceLastFrame = timestamp - lastFrameTime
+		if (timeSinceLastFrame >= frameInterval) {
+			update()
+			lastFrameTime = timestamp
+		}
+		requestAnimationFrame(loop)
+	}
+	function BuildCanvas() {
+		canvas.classList.remove("hidden")
+		const initial_buttons = document.querySelector("#initial_buttons")
+		initial_buttons.classList.add("hidden")
+		canvas.width = 600
+		canvas.height = 600
+	}
+	function setup() {
+		canvas.classList.remove("hidden")
+	}
+	function update() {
+		switch (game_state.state) {
+			case 0:
+				console.log("Waiting for guest")
+				drawWaitingForGuest()
+				break
+			case 1:
+				drawRunningGame()
+				break
+			case "finished":
+				break
+		}
+	}
+	function drawWaitingForGuest() {
+		ctx.fillStyle = "#7d4c2d"
+		ctx.fillRect(0, 0, canvas.width, canvas.height)
+		ctx.fillStyle = "white"
+		ctx.font = "bold 30px Arial"
+		ctx.textAlign = "center"
+		ctx.textBaseline = "middle"
+		ctx.fillText("AGUARDANDO JOGADOR", canvas.width / 2, canvas.height / 2 - 50)
+		ctx.fillText("INVITE CODE: " + invite_code.toUpperCase(), canvas.width / 2, canvas.height / 2)
+	}
+	function drawRunningGame() {
+		ctx.fillStyle = "black"
+		ctx.fillRect(0, 0, canvas.width, canvas.height)
+		ctx.strokeStyle = "white"
+		const working_height = canvas.height * 0.9
+		const working_width = canvas.width * 0.9
+		//ctx.strokeRect(1, 1, working_width, working_height)
+		worldWidth = game_state.worldWidth
+		worldHeight = game_state.worldHeight
+		const squareWidth = working_width / worldWidth 
+		for (let i = 0; i < worldWidth; i++) {
+			for (let j = 0; j < worldHeight; j++) {
+				ctx.strokeRect(i * squareWidth, j * squareWidth, squareWidth, squareWidth)
+			}
+		}
+		game_state.players.forEach(player => {
+			drawPlayer(player)
+		})
+		game_state.mobs.forEach(mob => {
+			drawMob(mob)
+		})
+	}
+	function drawMob(mob) {
+		const working_height = canvas.height * 0.9
+		const working_width = canvas.width * 0.9
+		//ctx.strokeRect(1, 1, working_width, working_height)
+		worldWidth = game_state.worldWidth
+		worldHeight = game_state.worldHeight
+		const squareWidth = working_width / worldWidth 
+		ctx.fillStyle = "green" 
+		ctx.beginPath();
+		const posX = working_width * mob.Position.X / worldWidth + squareWidth / 2
+		const posY = working_height * mob.Position.Y / worldHeight + squareWidth / 2
+
+		ctx.arc(posX, posY, (squareWidth / 2) * 0.7, 0, 2 * Math.PI);
+		ctx.fill();
+	}
+	function drawPlayer(player) {
+		const working_height = canvas.height * 0.9
+		const working_width = canvas.width * 0.9
+		//ctx.strokeRect(1, 1, working_width, working_height)
+		worldWidth = game_state.worldWidth
+		worldHeight = game_state.worldHeight
+		const squareWidth = working_width / worldWidth 
+		ctx.fillStyle = player.IsHost ? "blue" : "red"
+		ctx.beginPath();
+		const posX = working_width * player.Position.X / worldWidth + squareWidth / 2
+		const posY = working_height * player.Position.Y / worldHeight + squareWidth / 2
+
+		ctx.arc(posX, posY, (squareWidth / 2) * 0.7, 0, 2 * Math.PI);
+		ctx.fill();
+	}
+</script>
 </html>

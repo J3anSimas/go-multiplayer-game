@@ -65,7 +65,8 @@ func main() {
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 	}
-	game_logics := make([]*models.GameLogic, 0)
+	go hub.run()
+	games := make([]models.Room, 0)
 	e := echo.New()
 	t := &Template{
 		templates: template.Must(template.ParseGlob("public/views/*.html")),
@@ -76,19 +77,30 @@ func main() {
 		return c.Render(http.StatusOK, "index.html", "Teste")
 	})
 	e.POST("/room", func(c echo.Context) error {
-		fmt.Printf("Teste")
-		new_room, err := models.NewRoom(100, 100)
+		new_game, err := models.NewRoom(20, 20)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": err.Error(),
 			})
 		}
-		game_logic := models.GameLogic{
-			Room: &new_room,
+		invite_code := new_game.GetInviteCode()
+		games = append(games, new_game)
+		type Response struct {
+			Game       models.Room `json:"game"`
+			InviteCode string      `json:"invite_code"`
 		}
-		invite_code := game_logic.Room.GetInviteCode()
-		game_logics = append(game_logics, &game_logic)
+		response := Response{
+			Game:       new_game,
+			InviteCode: invite_code,
+		}
+		return c.JSON(http.StatusCreated, response)
 
+	})
+	e.POST("/room/:invite_code/join", func(c echo.Context) error {
+		return c.String(200, "Join")
+	})
+	e.GET("/ws/:room", func(c echo.Context) error {
+		room := c.Param("room")
 		conn, err := upgrader.Upgrade(c.Response().Writer, c.Request(), nil)
 		if err != nil {
 			// panic(err)
@@ -97,7 +109,7 @@ func main() {
 				"error": err.Error(),
 			})
 		}
-		client := &Client{conn: conn, room: game_logic.Room.Id}
+		client := &Client{conn: conn, room: room}
 		hub.register <- client
 		defer func() {
 			hub.unregister <- client
@@ -113,7 +125,6 @@ func main() {
 				return c.JSON(http.StatusInternalServerError, map[string]string{
 					"error": err.Error(),
 				})
-				break
 			}
 
 			type Message struct {
@@ -123,7 +134,7 @@ func main() {
 			msg := Message{}
 			json.Unmarshal(p, &msg)
 			fmt.Println("Messagem recebida", msg.Status, msg.CardId)
-			if clients, ok := hub.rooms[room]; ok {
+			if clients, ok := hub.rooms[client.room]; ok {
 				for client := range clients {
 					if client != conn {
 						err = client.WriteMessage(messageType, p)
@@ -133,7 +144,6 @@ func main() {
 							return c.JSON(http.StatusInternalServerError, map[string]string{
 								"error": err.Error(),
 							})
-							break
 						}
 					}
 				}
@@ -146,11 +156,8 @@ func main() {
 				return c.JSON(http.StatusInternalServerError, map[string]string{
 					"error": err.Error(),
 				})
-				break
 			}
 		}
-		return c.JSON(http.StatusCreated,
-			map[string]string{"invite_code": invite_code})
 	})
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", PORT)))
 }

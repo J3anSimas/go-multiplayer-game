@@ -9,14 +9,14 @@ import (
 )
 
 type Room struct {
-	Id          string
-	Status      types.Status
-	WorldWidth  int
-	WorldHeight int
-	Players     []*Player
-	Mobs        []*Mob
-	ShopItems   []ShopItem
-	Turn        types.Turn
+	Id          string       `json:"id"`
+	State       types.Status `json:"state"`
+	WorldWidth  int          `json:"worldWidth"`
+	WorldHeight int          `json:"worldHeight"`
+	Players     []*Player    `json:"players"`
+	Mobs        []*Mob       `json:"mobs"`
+	ShopItems   []ShopItem   `json:"shopItems"`
+	Turn        types.Turn   `json:"turn"`
 }
 
 func NewRoom(width, height int) (Room, error) {
@@ -53,7 +53,7 @@ func NewRoom(width, height int) (Room, error) {
 		Id:          id,
 		WorldWidth:  width,
 		WorldHeight: height,
-		Status:      types.WaitingForConnection,
+		State:       types.WaitingForGuestConnection,
 		Turn:        types.HostTurn,
 	}
 	players := make([]*Player, 1)
@@ -74,6 +74,14 @@ func NewRoom(width, height int) (Room, error) {
 	room.GenerateMobs()
 	return room, nil
 }
+func GetRoomById(rooms []Room, id string) *Room {
+	for i, r := range rooms {
+		if r.Id == id {
+			return &rooms[i]
+		}
+	}
+	return nil
+}
 func (r Room) GetInviteCode() string {
 	return r.Id[19:23]
 }
@@ -88,6 +96,9 @@ func (r *Room) FindPlayerById(playerId string) *Player {
 }
 
 func (r *Room) JoinGame() (Player, error) {
+	if len(r.Players) > 1 {
+		return Player{}, errors.New("Jogo já está cheio")
+	}
 	player := Player{
 		Id:             uuid.NewString(),
 		Ready:          false,
@@ -114,7 +125,7 @@ func (r *Room) StartGame() error {
 			return errors.New("nem todos os jogadores estão prontos")
 		}
 	}
-	r.Status = types.Running
+	r.State = types.Running
 	r.Turn = types.HostTurn
 	return nil
 }
@@ -137,4 +148,72 @@ func (r *Room) GenerateMobs() {
 	mobs[3] = NewMob(15, types.Point{X: posX, Y: posY}, 5, 5)
 
 	r.Mobs = mobs
+}
+func (r *Room) MovePlayer(player *Player,
+	x, y int,
+) ([]types.Point, error) {
+	return player.Move(x, y, r)
+}
+
+func (r *Room) PlayerAttackAnotherPlayer(attacker *Player,
+	target *Player) error {
+	if target.IsDead {
+		return errors.New("Alvo já está morto")
+	}
+	if attacker.ShotsRemaining == 0 {
+		return errors.New("Atacante não possui ataques restantes")
+	}
+
+	target.Health -= attacker.Strength
+	attacker.ShotsRemaining--
+	if target.Health <= 0 {
+		target.IsDead = true
+		r.FinishGame(*attacker)
+	}
+	return nil
+
+}
+
+func (r *Room) PlayerAttackMob(attacker *Player, target *Mob) error {
+	if attacker.ShotsRemaining == 0 {
+		return errors.New("Atacante não possui ataques restantes")
+	}
+
+	target.Health -= attacker.Strength
+	attacker.ShotsRemaining--
+	if target.Health <= 0 {
+		attacker.Coins += target.CoinsToDrop
+		target = nil
+	}
+	return nil
+
+}
+func (r *Room) FinishGame(winner Player) string {
+	r.State = types.GameOver
+	return winner.Id
+}
+func (r Room) ListShopItems() []ShopItem {
+	return r.ShopItems
+}
+func (r *Room) ChangeTurn(player *Player) {
+	if player.IsHost {
+		r.Turn = types.GuestTurn
+	} else {
+		r.Turn = types.HostTurn
+	}
+	player.ResetAttributes()
+}
+
+func (r Room) BuyItem(player *Player, shopItem ShopItem) error {
+	switch shopItem.Attribute {
+	case types.StrengthAttribute:
+		player.Strength += shopItem.Modifier
+	case types.MovementAttribute:
+		player.MoveCapacity += shopItem.Modifier
+	case types.AttackVelocityAttribute:
+		player.TotalShots += shopItem.Modifier
+	default:
+		return errors.New("Atributo não reconhecido")
+	}
+	return nil
 }

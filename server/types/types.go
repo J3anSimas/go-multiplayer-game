@@ -13,7 +13,8 @@ const (
 	GuestTurn
 )
 const (
-	WaitingForConnection Status = iota
+	WaitingForGuestConnection Status = iota
+	WaitingForReady
 	Running
 	Paused
 	GameOver
