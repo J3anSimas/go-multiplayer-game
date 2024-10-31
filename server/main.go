@@ -97,7 +97,20 @@ func main() {
 
 	})
 	e.POST("/room/:invite_code/join", func(c echo.Context) error {
-		return c.String(200, "Join")
+		invite_code := c.Param("invite_code")
+		room := models.GetRoomByInviteCode(&games, invite_code)
+		if room == nil {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"error": "Sala não encontrada",
+			})
+		}
+		_, err := room.JoinGame()
+		if err != nil {
+			return c.JSON(http.StatusForbidden, map[string]string{
+				"error": err.Error(),
+			})
+		}
+		return c.JSON(http.StatusCreated, room)
 	})
 	e.GET("/ws/:room", func(c echo.Context) error {
 		room := c.Param("room")
@@ -128,12 +141,12 @@ func main() {
 			}
 
 			type Message struct {
-				CardId string `json:"cardId"`
-				Status string `json:"status"`
+				Command string   `json:"cmd"`
+				Params  []string `json:"params"`
 			}
 			msg := Message{}
 			json.Unmarshal(p, &msg)
-			fmt.Println("Messagem recebida", msg.Status, msg.CardId)
+			fmt.Println("Messagem recebida", msg.Command, msg.Params)
 			if clients, ok := hub.rooms[client.room]; ok {
 				for client := range clients {
 					if client != conn {

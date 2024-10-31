@@ -36,7 +36,10 @@
 			<canvas id="gameCanvas" width="800" height="600" class="hidden"></canvas>
 		<div id = "initial_buttons" class="flex justify-around items-center gap-4 p-8">
 			 <button class="btn-primary px-24 py-16 rounded-md font-bold text-3xl flex justify-center items-center" onclick="StartGame()">NOVO JOGO</button>
-			 <button class="btn-secondary px-24 py-16 rounded-md font-bold text-3xl flex justify-center items-center">JUNTAR-SE</button>
+				<div class="flex flex-col gap-4">
+					<input type="text" id="invite_code" class="py-4 pl-4 rounded-md bg-gray" />
+					 <button class="btn-secondary px-24 py-16 rounded-md font-bold text-3xl flex justify-center items-center" onclick="JoinGame()">JUNTAR-SE</button>
+				</div>
 		</div>
 	</div>
 </body>
@@ -51,14 +54,45 @@
 
 	let invite_code = ''
 	let game_state = {}
+	let this_player_id = ''
 	let socket
+	async function JoinGame() {
+		try {
+			const invite_code = document.querySelector("#invite_code").value
+			const response = await fetch("/room/" + invite_code + '/join', {method: "POST"})
+			const parsedResponse = await response.json()
+			console.log(parsedResponse)
+			game_state = parsedResponse.game
+			this_player_id = game_state.players[1].id
+			const socket_url = "ws://" + window.location.host + "/ws/" + game_state.id
+			socket = new WebSocket(socket_url)
+			socket.onopen = function (event) {
+				console.log("Websocket connected")
+			}
+			socket.onmessage = function (event) {
+				console.log("Websocket connected")
+			}
+
+			socket.send({
+				"action": "join",
+				"arguments": "test"
+			})
+			BuildCanvas()
+			setup()
+			requestAnimationFrame(loop)
+		} catch (error) {
+			alert(error)
+		}
+	}
 	async function StartGame() {
 		//alert("start game")
+		try {
 		const response = await fetch("/room", {method: "POST"})
 		const parsedResponse = await response.json()
 		console.log(parsedResponse)
 		invite_code = parsedResponse.invite_code
 		game_state = parsedResponse.game
+		this_player_id = game_state.players[0].id
 		const socket_url = "ws://" + window.location.host + "/ws/" + game_state.id
 		socket = new WebSocket(socket_url)
 		socket.onopen = function (event) {
@@ -70,6 +104,9 @@
 		BuildCanvas()
 		setup()
 		requestAnimationFrame(loop)
+		} catch (error) {
+			alert(error)
+		}
 	}
 	function loop(timestamp) {
 		const timeSinceLastFrame = timestamp - lastFrameTime

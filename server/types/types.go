@@ -14,7 +14,7 @@ const (
 )
 const (
 	WaitingForGuestConnection Status = iota
-	WaitingForReady
+	WaitingForPlayersToGetReady
 	Running
 	Paused
 	GameOver

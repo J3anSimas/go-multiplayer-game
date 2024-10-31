@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/J3anSimas/game_multiplayer_go/types"
 	"github.com/J3anSimas/game_multiplayer_go/utils"
@@ -83,7 +84,15 @@ func GetRoomById(rooms []Room, id string) *Room {
 	return nil
 }
 func (r Room) GetInviteCode() string {
-	return r.Id[19:23]
+	return strings.ToUpper(r.Id[19:23])
+}
+func GetRoomByInviteCode(games *[]Room, invite_code string) *Room {
+	for i := 0; i < len(*games); i++ {
+		if (*games)[i].GetInviteCode() == strings.ToUpper(invite_code) {
+			return &(*games)[i]
+		}
+	}
+	return nil
 }
 
 func (r *Room) FindPlayerById(playerId string) *Player {
@@ -113,6 +122,7 @@ func (r *Room) JoinGame() (Player, error) {
 		IsDead:         false,
 	}
 	r.Players = append(r.Players, &player)
+	r.State = types.WaitingForPlayersToGetReady
 	return player, nil
 }
 
