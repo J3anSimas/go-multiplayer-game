@@ -227,3 +227,19 @@ func (r Room) BuyItem(player *Player, shopItem ShopItem) error {
 	}
 	return nil
 }
+func (r *Room) TogglePlayerReady(player *Player) error {
+	if r.State != types.WaitingForPlayersToGetReady {
+		return errors.New("Game State incorreto")
+	}
+	player.ToggleReady()
+	for _, p := range r.Players {
+		if !p.Ready {
+			return nil
+		}
+	}
+	err := r.StartGame()
+	if err != nil {
+		return err
+	}
+	return nil
+}

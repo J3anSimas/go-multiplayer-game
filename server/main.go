@@ -190,7 +190,13 @@ func main() {
 						"error": "Jogador não encontrado",
 					})
 				}
-				player.ToggleReady()
+				err = room.TogglePlayerReady(player)
+				if err != nil {
+					log.Printf("Jogo não encontrado\n")
+					return c.JSON(http.StatusInternalServerError, map[string]string{
+						"error": "Jogo não encontrado",
+					})
+				}
 				fmt.Println("Jogador Pronto", player.Ready)
 			default:
 				log.Printf("Comando não reconhecido\n")
