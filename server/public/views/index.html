@@ -52,31 +52,36 @@
 	const canvas = document.querySelector("#gameCanvas")
 	const ctx = canvas.getContext("2d")
 
+	let isHost = false
 	let invite_code = ''
 	let game_state = {}
 	let this_player_id = ''
 	let socket
+	function connectSocket() {
+		const socket_url = `ws://${window.location.host}/ws/${game_state.id}/${this_player_id}`
+		socket = new WebSocket(socket_url)
+		socket.onopen = function (event) {
+			console.log("Websocket connected")
+		}
+		socket.onmessage = function (event) {
+			try {
+				data = JSON.parse(event.data)
+				console.log(data)
+				game_state = data
+			} catch (err) {
+				console.log(err)
+			}
+		}
+	}
 	async function JoinGame() {
 		try {
 			const invite_code = document.querySelector("#invite_code").value
 			const response = await fetch("/room/" + invite_code + '/join', {method: "POST"})
 			const parsedResponse = await response.json()
 			console.log(parsedResponse)
-			game_state = parsedResponse.game
-			this_player_id = game_state.players[1].id
-			const socket_url = "ws://" + window.location.host + "/ws/" + game_state.id
-			socket = new WebSocket(socket_url)
-			socket.onopen = function (event) {
-				console.log("Websocket connected")
-			}
-			socket.onmessage = function (event) {
-				console.log("Websocket connected")
-			}
-
-			socket.send({
-				"action": "join",
-				"arguments": "test"
-			})
+			game_state = parsedResponse
+			this_player_id = game_state.players[1].Id
+			connectSocket()
 			BuildCanvas()
 			setup()
 			requestAnimationFrame(loop)
@@ -92,15 +97,9 @@
 		console.log(parsedResponse)
 		invite_code = parsedResponse.invite_code
 		game_state = parsedResponse.game
-		this_player_id = game_state.players[0].id
-		const socket_url = "ws://" + window.location.host + "/ws/" + game_state.id
-		socket = new WebSocket(socket_url)
-		socket.onopen = function (event) {
-			console.log("Websocket connected")
-		}
-		socket.onmessage = function (event) {
-			console.log("Websocket connected")
-		}
+		this_player_id = game_state.players[0].Id
+		isHost = true
+		connectSocket()
 		BuildCanvas()
 		setup()
 		requestAnimationFrame(loop)
@@ -129,15 +128,37 @@
 	function update() {
 		switch (game_state.state) {
 			case 0:
-				console.log("Waiting for guest")
 				drawWaitingForGuest()
 				break
 			case 1:
+				drawWaitingForPlayerToGetReady()
+				break
+			case 2:
 				drawRunningGame()
 				break
 			case "finished":
 				break
 		}
+	}
+	function drawWaitingForPlayerToGetReady() {
+		ctx.fillStyle = "#7d4c2d"
+		ctx.fillRect(0, 0, canvas.width, canvas.height)
+		ctx.fillStyle = "white"
+		ctx.font = "bold 30px Arial"
+		ctx.textAlign = "center"
+		ctx.textBaseline = "middle"
+		ctx.fillText("Aguardando Pronto", canvas.width / 2, canvas.height / 2 - 50)
+		ctx.font = "bold 18px Arial"
+		ctx.fillText("Pressione ESPAÇO quando estiver pronto", canvas.width / 2, canvas.height / 2 )
+
+		ctx.textAlign = "left"
+		let text = game_state.players[0].Ready ? "Pronto" : "Não Pronto"
+		ctx.fillText(text, canvas.width *0.1, canvas.height * 0.9 )
+		ctx.textAlign = "right"
+		text = game_state.players[1].Ready ? "Pronto" : "Não Pronto"
+		ctx.fillText(text, canvas.width * 0.9, canvas.height * 0.9 )
+
+
 	}
 	function drawWaitingForGuest() {
 		ctx.fillStyle = "#7d4c2d"
@@ -200,6 +221,29 @@
 
 		ctx.arc(posX, posY, (squareWidth / 2) * 0.7, 0, 2 * Math.PI);
 		ctx.fill();
+	}
+	document.addEventListener('keydown', function (e) {
+		switch (game_state.state) {
+			case 0:
+			break
+			case 1:
+				dealInputsWaitingForPlayerToGetReady(e.key)
+			break
+				
+		}
+	})
+	function dealInputsWaitingForPlayerToGetReady(key) {
+		switch (key) {
+			case ' ':
+				console.log("set ready")
+				const payload = {
+					cmd: "set_ready",
+				}
+				console.log(this_player_id)
+				const stringData = JSON.stringify(payload) 
+				socket.send(stringData)
+				break
+		}
 	}
 </script>
 </html>

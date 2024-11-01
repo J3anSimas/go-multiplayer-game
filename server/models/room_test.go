@@ -16,7 +16,10 @@ func TestAbc(t *testing.T) {
 
 	invite_code := new_game.GetInviteCode()
 	room := GetRoomByInviteCode(&games, invite_code)
-	_, err = room.JoinGame()
+	t.Logf("%+v\n", room.Players[0].Id)
+	player, err := room.JoinGame()
 	assert.NoError(err, "Erro ao entrar na sala")
+	assert.Equal(player.Id, new_game.Players[1].Id, "Jogadores não são iguais")
+	t.Logf("%+v\n", room.Players[1].Id)
 
 }

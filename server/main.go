@@ -25,8 +25,9 @@ type Template struct {
 	templates *template.Template
 }
 type Client struct {
-	conn *websocket.Conn
-	room string
+	conn     *websocket.Conn
+	roomId   string
+	playerId string
 }
 type Hub struct {
 	rooms      map[string]map[*websocket.Conn]bool
@@ -38,17 +39,17 @@ func (h *Hub) run() {
 	for {
 		select {
 		case client := <-h.register:
-			if h.rooms[client.room] == nil {
-				h.rooms[client.room] = make(map[*websocket.Conn]bool)
+			if h.rooms[client.roomId] == nil {
+				h.rooms[client.roomId] = make(map[*websocket.Conn]bool)
 			}
-			h.rooms[client.room][client.conn] = true
+			h.rooms[client.roomId][client.conn] = true
 
 		case client := <-h.unregister:
-			if clients, ok := h.rooms[client.room]; ok {
+			if clients, ok := h.rooms[client.roomId]; ok {
 				if _, ok := clients[client.conn]; ok {
 					delete(clients, client.conn)
 					if len(clients) == 0 {
-						delete(h.rooms, client.room)
+						delete(h.rooms, client.roomId)
 					}
 				}
 			}
@@ -112,8 +113,9 @@ func main() {
 		}
 		return c.JSON(http.StatusCreated, room)
 	})
-	e.GET("/ws/:room", func(c echo.Context) error {
-		room := c.Param("room")
+	e.GET("/ws/:room/:player", func(c echo.Context) error {
+		room_id := c.Param("room")
+		playerId := c.Param("player")
 		conn, err := upgrader.Upgrade(c.Response().Writer, c.Request(), nil)
 		if err != nil {
 			// panic(err)
@@ -122,8 +124,28 @@ func main() {
 				"error": err.Error(),
 			})
 		}
-		client := &Client{conn: conn, room: room}
+		client := &Client{conn: conn, roomId: room_id, playerId: playerId}
 		hub.register <- client
+		if clients, ok := hub.rooms[client.roomId]; ok {
+			game_state := models.GetRoomById(games, room_id)
+			json_data, err := json.Marshal(game_state)
+			if err != nil {
+				log.Printf("%s, Erro ao serializar para json\n", err.Error())
+				return c.JSON(http.StatusInternalServerError, map[string]string{
+					"error": err.Error(),
+				})
+			}
+			for client := range clients {
+				err = client.WriteMessage(websocket.TextMessage, json_data)
+				if err != nil {
+					// panic(err)
+					log.Printf("%s, error while writing message\n", err.Error())
+					return c.JSON(http.StatusInternalServerError, map[string]string{
+						"error": err.Error(),
+					})
+				}
+			}
+		}
 		defer func() {
 			hub.unregister <- client
 			conn.Close()
@@ -131,7 +153,7 @@ func main() {
 
 		for {
 			// Read message from client
-			messageType, p, err := conn.ReadMessage()
+			_, p, err := conn.ReadMessage()
 			if err != nil {
 				// panic(err)
 				log.Printf("%s, error while reading message\n", err.Error())
@@ -139,18 +161,57 @@ func main() {
 					"error": err.Error(),
 				})
 			}
-
 			type Message struct {
-				Command string   `json:"cmd"`
-				Params  []string `json:"params"`
+				Cmd    string   `json:"cmd"`
+				Params []string `json:"params"`
 			}
 			msg := Message{}
-			json.Unmarshal(p, &msg)
-			fmt.Println("Messagem recebida", msg.Command, msg.Params)
-			if clients, ok := hub.rooms[client.room]; ok {
+			err = json.Unmarshal(p, &msg)
+			if err != nil {
+				log.Printf("%s, Erro ao deserializar o json\n", err.Error())
+				return c.JSON(http.StatusInternalServerError, map[string]string{
+					"error": err.Error(),
+				})
+			}
+			switch msg.Cmd {
+			case "set_ready":
+				room := models.GetRoomById(games, room_id)
+				if room == nil {
+					log.Printf("Jogo não encontrado\n")
+					return c.JSON(http.StatusInternalServerError, map[string]string{
+						"error": "Jogo não encontrado",
+					})
+				}
+				player := room.FindPlayerById(playerId)
+				fmt.Println(playerId)
+				if player == nil {
+					log.Printf("Jogador não encontrado\n")
+					return c.JSON(http.StatusInternalServerError, map[string]string{
+						"error": "Jogador não encontrado",
+					})
+				}
+				player.ToggleReady()
+				fmt.Println("Jogador Pronto", player.Ready)
+			default:
+				log.Printf("Comando não reconhecido\n")
+				return c.JSON(http.StatusInternalServerError, map[string]string{
+					"error": "Comando não reconhecido",
+				})
+
+			}
+			game_state := models.GetRoomById(games, room_id)
+			json_data, err := json.Marshal(game_state)
+			if err != nil {
+				log.Printf("%s, Erro ao serializar para json\n", err.Error())
+				return c.JSON(http.StatusInternalServerError, map[string]string{
+					"error": err.Error(),
+				})
+			}
+			fmt.Println("Messagem recebida", msg.Cmd, msg.Params)
+			if clients, ok := hub.rooms[client.roomId]; ok {
 				for client := range clients {
 					if client != conn {
-						err = client.WriteMessage(messageType, p)
+						err = client.WriteMessage(websocket.TextMessage, json_data)
 						if err != nil {
 							// panic(err)
 							log.Printf("%s, error while writing message\n", err.Error())
@@ -162,7 +223,7 @@ func main() {
 				}
 			}
 			// Echo message back to client
-			err = conn.WriteMessage(messageType, p)
+			err = conn.WriteMessage(websocket.TextMessage, json_data)
 			if err != nil {
 				// panic(err)
 				log.Printf("%s, error while writing message\n", err.Error())

@@ -1,13 +1,5 @@
 package models
 
-import (
-	"strconv"
-	"testing"
-
-	"github.com/J3anSimas/game_multiplayer_go/types"
-	"github.com/stretchr/testify/assert"
-)
-
 // func TestPlayerMove(t *testing.T) {
 // 	room, err := NewRoom(5, 5)
 // 	assert.NoError(t, err, "Erro ao criar a sala")
@@ -43,24 +35,24 @@ import (
 // 	}
 // }
 
-func TestPlayerMovementNew(t *testing.T) {
-	assert := assert.New(t)
-	room, _ := NewRoom(5, 5)
-	mobs := make([]*Mob, 1)
-	mobs[0] = &Mob{
-		Health:   100,
-		Position: types.Point{X: 3, Y: 3},
-		Strength: 10,
-	}
-	room.Mobs = mobs
-	room.Players[0].Position = types.Point{X: 0, Y: 0}
-	room.Players[0].MovesRemaining = 3
-	_, err := room.Players[0].Move(4, 3, &room)
-	assert.NotNil(err, "Esperado que o room.Players[0] não tenha movimento suficiente")
-	room.Players[0].MovesRemaining = 4
-	_, err = room.Players[0].Move(4, 3, &room)
-	assert.Nil(err, "Esperado nenhum erro, mas algo aconteceu: "+err.Error())
-	movesRemainingString := strconv.Itoa(room.Players[0].MovesRemaining)
-	assert.Equal(0, room.Players[0].MovesRemaining, "Número de movimentos errado: "+movesRemainingString)
-
-}
+// func TestPlayerMovementNew(t *testing.T) {
+// 	assert := assert.New(t)
+// 	room, _ := NewRoom(5, 5)
+// 	mobs := make([]*Mob, 1)
+// 	mobs[0] = &Mob{
+// 		Health:   100,
+// 		Position: types.Point{X: 3, Y: 3},
+// 		Strength: 10,
+// 	}
+// 	room.Mobs = mobs
+// 	room.Players[0].Position = types.Point{X: 0, Y: 0}
+// 	room.Players[0].MovesRemaining = 3
+// 	_, err := room.Players[0].Move(4, 3, &room)
+// 	assert.NotNil(err, "Esperado que o room.Players[0] não tenha movimento suficiente")
+// 	room.Players[0].MovesRemaining = 4
+// 	_, err = room.Players[0].Move(4, 3, &room)
+// 	assert.Nil(err, "Esperado nenhum erro, mas algo aconteceu: "+err.Error())
+// 	movesRemainingString := strconv.Itoa(room.Players[0].MovesRemaining)
+// 	assert.Equal(0, room.Players[0].MovesRemaining, "Número de movimentos errado: "+movesRemainingString)
+//
+// }

@@ -10,8 +10,8 @@ import (
 )
 
 type Player struct {
-	Id             string `json:"id"`
-	Ready          bool   `json:"ready"`
+	Id             string
+	Ready          bool
 	IsHost         bool
 	Position       types.Point
 	Health         int
