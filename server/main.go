@@ -24,6 +24,11 @@ var upgrader = websocket.Upgrader{
 type Template struct {
 	templates *template.Template
 }
+
+func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	return t.templates.ExecuteTemplate(w, name, data)
+}
+
 type Client struct {
 	conn     *websocket.Conn
 	roomId   string
@@ -57,9 +62,6 @@ func (h *Hub) run() {
 	}
 }
 
-func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
-}
 func main() {
 	hub := &Hub{
 		rooms:      make(map[string]map[*websocket.Conn]bool),
@@ -73,6 +75,7 @@ func main() {
 		templates: template.Must(template.ParseGlob("public/views/*.html")),
 	}
 	e.Renderer = t
+	e.Static("/public", "public/")
 
 	e.GET("/", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "index.html", "Teste")
