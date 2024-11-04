@@ -180,6 +180,16 @@
 		game_state.mobs.forEach(mob => {
 			drawMob(mob)
 		})
+
+
+		ctx.fillStyle = "white"
+		ctx.font = "bold 18px Arial"
+		ctx.textAlign = "center"
+		ctx.textAlign = "left"
+		let text = `Vida: ${game_state.players[0].Health} | Moedas: ${game_state.players[0].Coins} | Força: ${game_state.players[0].Strength} | Movimentos Restantes: ${game_state.players[0].MovesRemaining}`
+		ctx.fillText(text, working_width * 0.01, canvas.height * 0.93 )
+		text = `Vida: ${game_state.players[1].Health} | Moedas: ${game_state.players[1].Coins} | Força: ${game_state.players[1].Strength} | Movimentos Restantes: ${game_state.players[1].MovesRemaining}`
+		ctx.fillText(text, working_width * 0.01, canvas.height * 0.98 )
 	}
 	function drawMob(mob) {
 		const working_height = canvas.height * 0.9
