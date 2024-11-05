@@ -35,6 +35,9 @@
 <script>
 	const fps = 30;
 	// Calcula o intervalo entre frames em milissegundos
+	/**
+	 * @type {string}
+	 */
 	const frameInterval = 1000 / fps;
 	let lastFrameTime = 0;
 
@@ -54,6 +57,7 @@
 		}
 		socket.onmessage = function (event) {
 			try {
+				console.log(typeof event.data)
 				data = JSON.parse(event.data)
 				console.log(data)
 				game_state = data
