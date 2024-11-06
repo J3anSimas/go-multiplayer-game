@@ -1,5 +1,6 @@
 import { handleInput } from "./input.js";
 import { Render } from "./render.js";
+import { connectSocket } from "./socket.js";
 
 const fps = 30;
 const frameInterval = 1000 / fps;
@@ -9,9 +10,10 @@ let lastFrameTime = 0;
 /** @type {HTMLCanvasElement} */
 const canvas = document.createElement("canvas");
 const canvasHolder = document.querySelector('body > div');
-if (canvasHolder !== null) {
-	canvasHolder.appendChild(canvas);
+if (canvasHolder === null) {
+	throw new Error("Canvas holder not found");
 }
+canvasHolder.appendChild(canvas);
 canvas.classList.add("hidden");
 
 let invite_code = "";
@@ -21,73 +23,36 @@ let this_player_id = "";
 /** @type {WebSocket} */
 let socket;
 
-function connectSocket() {
-	if (game_state === null) {
-		return;
-	}
-	const socket_url =
-		`ws://${window.location.host}/ws/${game_state.Id}/${this_player_id}`;
-	socket = new WebSocket(socket_url);
-	socket.onopen = function() {
-		console.log("Websocket connected");
-	};
-	/**
-	 * @param {{ data: string }} event
-	 */
-	function onMessage(event) {
-		try {
-			const data = JSON.parse(event.data);
-			console.log(data);
-			game_state = data;
-		} catch (err) {
-			console.log(err);
-		}
-	}
-	socket.onmessage = onMessage;
-}
-async function JoinGame() {
+async function InitializeGame(isJoin = false) {
 	try {
+		let response, parsedResponse;
 		// @type {HTMLInputElement}
-		const invite_code = /** @type {HTMLInputElement} */ (document.querySelector("#invite_code"));
-
-		if (invite_code === null) {
-			return;
+		const invite_code_input = /** @type {HTMLInputElement} */ (document.querySelector("#invite_code"));
+		if (isJoin) {
+			if (invite_code_input === null) {
+				return;
+			}
+			response = await fetch(`/room/${invite_code_input.value}/join`, { method: "POST" });
+		} else {
+			response = await fetch("/room", { method: "POST" });
 		}
 
-		const invite_code_value = invite_code.value;
+		parsedResponse = await response.json();
+		game_state = parsedResponse.game || parsedResponse;
 
-		console.log(invite_code_value);
-		const response = await fetch("/room/" + invite_code_value + "/join", {
-			method: "POST",
-		});
-
-		const parsedResponse = await response.json();
-		console.log(parsedResponse);
-		game_state = parsedResponse;
-		if (game_state !== null) {
-			this_player_id = game_state.Players[1].Id;
+		if (game_state === null) {
+			throw new Error("Game state is null");
 		}
-		connectSocket();
+		this_player_id = isJoin ? game_state.Players[1].Id : game_state.Players[0].Id;
+		invite_code = isJoin ? invite_code_input.value : parsedResponse.invite_code;
+		if (game_state === null) {
+			throw new Error("Game state is null");
+		}
+		socket = connectSocket(game_state, this_player_id);
 		BuildCanvas();
 		setup();
 		requestAnimationFrame(loop);
-	} catch (error) {
-		alert(error);
-	}
-}
-async function StartGame() {
-	try {
-		const response = await fetch("/room", { method: "POST" });
-		const parsedResponse = await response.json();
-		invite_code = parsedResponse.invite_code;
-		game_state = parsedResponse.game;
-		if (game_state !== null) {
-			this_player_id = game_state.Players[0].Id;
-		}
-		connectSocket();
-		BuildCanvas();
-		setup();
-		requestAnimationFrame(loop);
+
 	} catch (error) {
 		alert(error);
 	}
@@ -120,20 +85,18 @@ function update() {
 	Render(canvas, game_state, invite_code);
 
 }
-/** @param {Mob} mob */
+const buttonStartGame = document.querySelector("#start_game");
+if (buttonStartGame !== null) {
+	buttonStartGame.addEventListener("click", InitializeGame.bind(null, false));
+}
+const buttonJoinGame = document.querySelector("#join_game");
+if (buttonJoinGame !== null) {
+	buttonJoinGame.addEventListener("click", InitializeGame.bind(null, true));
+}
+
 document.addEventListener("keydown", function(e) {
 	if (game_state === null) {
 		return
 	}
 	handleInput(e, game_state, socket);
 });
-/** @param {string} key */
-const buttonStartGame = document.querySelector("#start_game");
-if (buttonStartGame !== null) {
-	buttonStartGame.addEventListener("click", StartGame);
-}
-const buttonJoinGame = document.querySelector("#join_game");
-if (buttonJoinGame !== null) {
-	buttonJoinGame.addEventListener("click", JoinGame);
-}
-
