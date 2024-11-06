@@ -1,13 +1,13 @@
-import { drawMob } from "./mob.js";
-import { drawPlayer } from "./player.js";
-import { State } from "./enums.js";
+import { State } from "../enums.js";
+import { drawRunningGame } from "./draw_running_game.js";
 
 /** 
  * @param {HTMLCanvasElement} canvas 
  * @param {GameState} game_state 
  * @param {string} invite_code
+ * @param {Point} cursor
  * */
-export function Render(canvas, game_state, invite_code) {
+export function Render(canvas, game_state, invite_code, cursor) {
 	switch (game_state.State) {
 		case State.WaitingForGuestConnection:
 			drawWaitingForGuest(canvas, invite_code);
@@ -16,7 +16,7 @@ export function Render(canvas, game_state, invite_code) {
 			drawWaitingForPlayerToGetReady(canvas, game_state);
 			break;
 		case State.Running:
-			drawRunningGame(canvas, game_state);
+			drawRunningGame(canvas, game_state, canvas.width * 0.9, cursor);
 			break;
 		case State.GameOver:
 			break;
@@ -83,60 +83,3 @@ function drawWaitingForGuest(canvas, invite_code) {
 	);
 }
 
-/** 
-	* @param {HTMLCanvasElement} canvas
-	* @param {GameState} game_state
-*/
-function drawRunningGame(canvas, game_state) {
-	const ctx = canvas.getContext("2d");
-	if (ctx === null) {
-		return;
-	}
-	if (game_state === null) {
-		return;
-	}
-	ctx.fillStyle = "black";
-	ctx.fillRect(0, 0, canvas.width, canvas.height);
-	ctx.strokeStyle = "white";
-	const working_height = canvas.height * 0.9;
-	const working_width = canvas.width * 0.9;
-	//ctx.strokeRect(1, 1, working_width, working_height)
-	const worldWidth = game_state.WorldWidth;
-	const worldHeight = game_state.WorldHeight;
-	const squareWidth = working_width / worldWidth;
-	for (let i = 0; i < worldWidth; i++) {
-		for (let j = 0; j < worldHeight; j++) {
-			ctx.strokeRect(
-				i * squareWidth,
-				j * squareWidth,
-				squareWidth,
-				squareWidth,
-			);
-		}
-	}
-	game_state.Players.forEach((player) => {
-		if (game_state === null) {
-			return;
-		}
-		drawPlayer(player, canvas, game_state);
-	});
-	game_state.Mobs.forEach((mob) => {
-		if (game_state === null) {
-			return;
-		}
-		drawMob(mob, canvas, game_state);
-	});
-
-	ctx.fillStyle = "white";
-	ctx.font = "bold 18px Arial";
-	ctx.textAlign = "center";
-	ctx.textAlign = "left";
-	let text = `Vida: ${game_state.Players[0].Health} | Moedas: ${game_state.Players[0].Coins
-		} | Força: ${game_state.Players[0].Strength} | Movimentos Restantes: ${game_state.Players[0].MovesRemaining
-		}`;
-	ctx.fillText(text, working_width * 0.01, canvas.height * 0.93);
-	text = `Vida: ${game_state.Players[1].Health} | Moedas: ${game_state.Players[1].Coins
-		} | Força: ${game_state.Players[1].Strength} | Movimentos Restantes: ${game_state.Players[1].MovesRemaining
-		}`;
-	ctx.fillText(text, working_width * 0.01, canvas.height * 0.98);
-}

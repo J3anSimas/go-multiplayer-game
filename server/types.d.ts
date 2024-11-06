@@ -59,3 +59,4 @@ type ShopItem = {
 	Attribute: ShopItemAttributeModifier;
 	Modifier: number;
 };
+

@@ -28,3 +28,12 @@ export var ShopItemAttributeModifier = {
 	AttackVelocityAttribute: 2,
 }
 
+/**
+ * @readonly
+ * @enum {number}
+ * */
+export var PlayerState = {
+	IsMoving: 0,
+	IsAttacking: 1,
+	IsBuying: 2,
+}
