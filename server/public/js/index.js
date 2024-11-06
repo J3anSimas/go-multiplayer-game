@@ -1,4 +1,5 @@
 import { drawPlayer } from "./player.js";
+import { drawMob } from "./mob.js";
 
 /** 
  * @readonly
@@ -32,7 +33,10 @@ let lastFrameTime = 0;
 // write type annotation in jsdocs for the variable bellow asserting that it cannot be null
 /** @type {HTMLCanvasElement} */
 const canvas = document.createElement("canvas");
-document.body.appendChild(canvas);
+const canvasHolder = document.querySelector('body > div');
+if (canvasHolder !== null) {
+	canvasHolder.appendChild(canvas);
+}
 canvas.classList.add("hidden");
 const ctx = canvas.getContext("2d");
 
@@ -68,9 +72,16 @@ function connectSocket() {
 }
 async function JoinGame() {
 	try {
-		/** {HTMLInputElement} */
-		const invite_code = document.querySelector("#invite_code");
-		const invite_code_value = invite_code?.nodeValue;
+		// @type {HTMLInputElement}
+		const invite_code = /** @type {HTMLInputElement} */ (document.querySelector("#invite_code"));
+
+		if (invite_code === null) {
+			return;
+		}
+
+		const invite_code_value = invite_code.value;
+
+		console.log(invite_code_value);
 		const response = await fetch("/room/" + invite_code_value + "/join", {
 			method: "POST",
 		});
@@ -229,7 +240,10 @@ function drawRunningGame() {
 		drawPlayer(player, canvas, game_state);
 	});
 	game_state.Mobs.forEach((mob) => {
-		drawMob(mob);
+		if (game_state === null) {
+			return;
+		}
+		drawMob(mob, canvas, game_state);
 	});
 
 	ctx.fillStyle = "white";
@@ -246,28 +260,6 @@ function drawRunningGame() {
 	ctx.fillText(text, working_width * 0.01, canvas.height * 0.98);
 }
 /** @param {Mob} mob */
-function drawMob(mob) {
-	if (game_state === null) {
-		return;
-	}
-	if (ctx === null) {
-		return;
-	}
-	const working_height = canvas.height * 0.9;
-	const working_width = canvas.width * 0.9;
-	//ctx.strokeRect(1, 1, working_width, working_height)
-	const worldWidth = game_state.WorldWidth;
-	const worldHeight = game_state.WorldHeight;
-	const squareWidth = working_width / worldWidth;
-	ctx.fillStyle = "green";
-	ctx.beginPath();
-	const posX = working_width * mob.Position.X / worldWidth + squareWidth / 2;
-	const posY = working_height * mob.Position.Y / worldHeight +
-		squareWidth / 2;
-
-	ctx.arc(posX, posY, (squareWidth / 2) * 0.7, 0, 2 * Math.PI);
-	ctx.fill();
-}
 document.addEventListener("keydown", function(e) {
 	if (game_state === null) {
 		return
@@ -294,3 +286,12 @@ function dealInputsWaitingForPlayerToGetReady(key) {
 			break;
 	}
 }
+const buttonStartGame = document.querySelector("#start_game");
+if (buttonStartGame !== null) {
+	buttonStartGame.addEventListener("click", StartGame);
+}
+const buttonJoinGame = document.querySelector("#join_game");
+if (buttonJoinGame !== null) {
+	buttonJoinGame.addEventListener("click", JoinGame);
+}
+

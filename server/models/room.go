@@ -10,14 +10,14 @@ import (
 )
 
 type Room struct {
-	Id          string       `json:"id"`
-	State       types.Status `json:"state"`
-	WorldWidth  int          `json:"worldWidth"`
-	WorldHeight int          `json:"worldHeight"`
-	Players     []*Player    `json:"players"`
-	Mobs        []*Mob       `json:"mobs"`
-	ShopItems   []ShopItem   `json:"shopItems"`
-	Turn        types.Turn   `json:"turn"`
+	Id          string
+	State       types.Status
+	WorldWidth  int
+	WorldHeight int
+	Players     []*Player
+	Mobs        []*Mob
+	ShopItems   []ShopItem
+	Turn        types.Turn
 }
 
 func NewRoom(width, height int) (Room, error) {
