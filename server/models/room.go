@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"math"
 	"strings"
 
 	"github.com/J3anSimas/game_multiplayer_go/types"
@@ -167,6 +168,9 @@ func (r *Room) MovePlayer(player *Player,
 
 func (r *Room) PlayerAttackAnotherPlayer(attacker *Player,
 	target *Player) error {
+	if !r.TargetInAttackRange(attacker, target.Position) {
+		return errors.New("Alvo fora do alcance")
+	}
 	if target.IsDead {
 		return errors.New("Alvo já está morto")
 	}
@@ -183,8 +187,17 @@ func (r *Room) PlayerAttackAnotherPlayer(attacker *Player,
 	return nil
 
 }
+func (r *Room) TargetInAttackRange(attacker *Player, target types.Point) bool {
+	if math.Abs(float64(attacker.Position.X-target.X)) > 1 || math.Abs(float64(attacker.Position.Y-target.Y)) > 1 {
+		return false
+	}
+	return true
+}
 
 func (r *Room) PlayerAttackMob(attacker *Player, target *Mob) error {
+	if !r.TargetInAttackRange(attacker, target.Position) {
+		return errors.New("Alvo fora do alcance")
+	}
 	if attacker.ShotsRemaining == 0 {
 		return errors.New("Atacante não possui ataques restantes")
 	}

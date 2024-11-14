@@ -84,12 +84,6 @@ func isValid(x, y, nRows, nCols int, room Room) bool {
 
 // FindShortestPath encontra o menor número de movimentos de start até end na matriz.
 func (p Player) FindShortestPath(room Room, endPoint types.Point) (int, []types.Point) {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Recovered from panic:", r)
-			debug.PrintStack() // Imprime a stacktrace
-		}
-	}()
 	nRows := room.WorldHeight
 	nCols := room.WorldWidth
 
